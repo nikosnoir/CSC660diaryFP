@@ -153,7 +153,8 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+  DateTime? _selectedDay = DateTime.now(); // <-- set to today by default
+  late PageController _pageController;
 
   // Helper to group entries by date
   Map<String, List<DiaryEntry>> get _entriesByDate {
@@ -190,12 +191,37 @@ class _CalendarPageState extends State<CalendarPage> {
       stats[e] = 0;
     }
     for (final entry in entries) {
-      final entryDate = DateTime.tryParse(entry.date);
-      if (entryDate != null && !entryDate.isBefore(weekStart) && !entryDate.isAfter(weekEnd)) {
-        stats[entry.emotion] = (stats[entry.emotion] ?? 0) + 1;
+      // Parse DD/MM/YYYY format
+      final parts = entry.date.split('/');
+      if (parts.length == 3) {
+        final day = int.tryParse(parts[0]);
+        final month = int.tryParse(parts[1]);
+        final year = int.tryParse(parts[2]);
+        if (day != null && month != null && year != null) {
+          final entryDate = DateTime(year, month, day);
+          if (!entryDate.isBefore(weekStart) && !entryDate.isAfter(weekEnd)) {
+            stats[entry.emotion] = (stats[entry.emotion] ?? 0) + 1;
+          }
+        }
       }
     }
     return stats;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final weekStarts = _getWeekStartDates(_focusedDay);
+    final idx = weekStarts.indexWhere((w) =>
+      !w.isAfter(_selectedDay!) &&
+      !w.add(const Duration(days: 6)).isBefore(_selectedDay!));
+    _pageController = PageController(initialPage: idx == -1 ? 0 : idx);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -228,13 +254,33 @@ class _CalendarPageState extends State<CalendarPage> {
               CalendarFormat.month: 'Month',
             },
             eventLoader: (day) {
-              final dateStr = "${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+              final dateStr = "${day.day.toString().padLeft(2, '0')}/${day.month.toString().padLeft(2, '0')}/${day.year.toString().padLeft(4, '0')}";
               return entriesByDate[dateStr] ?? [];
             },
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
+                final weekStarts = _getWeekStartDates(_focusedDay);
+                final idx = weekStarts.indexWhere((w) =>
+                  !w.isAfter(selectedDay) &&
+                  !w.add(const Duration(days: 6)).isBefore(selectedDay));
+                if (idx != -1) {
+                  _pageController.jumpToPage(idx);
+                }
+              });
+            },
+            onPageChanged: (focusedDay) {
+              setState(() {
+                _focusedDay = focusedDay;
+                // Jump to the week of the selected day (or today)
+                final weekStarts = _getWeekStartDates(_focusedDay);
+                final idx = weekStarts.indexWhere((w) =>
+                  !w.isAfter(_selectedDay!) &&
+                  !w.add(const Duration(days: 6)).isBefore(_selectedDay!));
+                if (idx != -1) {
+                  _pageController.jumpToPage(idx);
+                }
               });
             },
             calendarBuilders: CalendarBuilders(
@@ -251,6 +297,23 @@ class _CalendarPageState extends State<CalendarPage> {
                   );
                 }
                 return null;
+              },
+              todayBuilder: (context, day, focusedDay) {
+                return Container(
+                  margin: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue, // Highlight color for today
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${day.day}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
               },
             ),
           ),
@@ -280,7 +343,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 height: 320, // Make statistics box bigger
                 child: PageView.builder(
                   itemCount: weekStarts.length,
-                  controller: PageController(initialPage: initialWeekPage),
+                  controller: _pageController,
                   itemBuilder: (context, weekIndex) {
                     final weekStart = weekStarts[weekIndex];
                     final stats = _emotionStatsForWeek(weekStart, entries);
@@ -295,7 +358,8 @@ class _CalendarPageState extends State<CalendarPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              "Week of ${weekStart.month}/${weekStart.day} - ${weekEnd.month}/${weekEnd.day}",
+                              "Week of ${weekStart.day.toString().padLeft(2, '0')}/${weekStart.month.toString().padLeft(2, '0')} - "
+                              "${weekEnd.day.toString().padLeft(2, '0')}/${weekEnd.month.toString().padLeft(2, '0')}",
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                               textAlign: TextAlign.center,
                             ),
@@ -357,7 +421,7 @@ class _CalendarPageState extends State<CalendarPage> {
     if (_selectedDay == null) {
       return const SizedBox.shrink();
     }
-    final dateStr = "${_selectedDay!.year.toString().padLeft(4, '0')}-${_selectedDay!.month.toString().padLeft(2, '0')}-${_selectedDay!.day.toString().padLeft(2, '0')}";
+    final dateStr = "${_selectedDay!.day.toString().padLeft(2, '0')}/${_selectedDay!.month.toString().padLeft(2, '0')}/${_selectedDay!.year.toString().padLeft(4, '0')}";
     final entries = entriesByDate[dateStr] ?? [];
     if (entries.isEmpty) {
       return const Text('No entries for this day', style: TextStyle(fontSize: 12, color: Colors.grey));
@@ -487,21 +551,48 @@ class _HomePageState extends State<HomePage> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final entry = widget.entries[index];
-                return ListTile(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  title: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: Text(
-                    '${entry.date}\n${entry.description}',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                return Dismissible(
+                  key: Key(entry.hashCode.toString()),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    color: Colors.red,
+                    child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  leading: Text(
-                    _emotions[entry.emotion] ?? '❓',
-                    style: const TextStyle(fontSize: 28),
+                  onDismissed: (direction) {
+                    final removedEntry = widget.entries[index];
+                    widget.onDelete(index);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Entry deleted'),
+                        action: SnackBarAction(
+                          label: 'Undo',
+                          onPressed: () {
+                            widget.onAdd(removedEntry);
+                            setState(() {}); // Refresh UI
+                          },
+                        ),
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  },
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    tileColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    title: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                    subtitle: Text(
+                      '${entry.date}\n${entry.description}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    leading: Text(
+                      _emotions[entry.emotion] ?? '❓',
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                    onTap: () => _openDetail(context, index),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  onTap: () => _openDetail(context, index),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 );
               },
             ),
@@ -556,7 +647,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
       final entry = DiaryEntry(
         title: _title,
         description: _description,
-        date: "${_selectedDate.year.toString().padLeft(4, '0')}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}",
+        date: "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year.toString().padLeft(4, '0')}",
         emotion: _emotion,
       );
       Navigator.pop(context, entry);
