@@ -286,12 +286,24 @@ class _CalendarPageState extends State<CalendarPage> {
             calendarBuilders: CalendarBuilders(
               markerBuilder: (context, day, events) {
                 if (events.isNotEmpty) {
+                  // Only show up to 2 unique emotion emojis for the day (first come, first serve)
+                  final uniqueEmotions = <String>[];
+                  for (final entry in events as List<DiaryEntry>) {
+                    final emoji = _emotions[entry.emotion] ?? '';
+                    if (emoji.isNotEmpty && !uniqueEmotions.contains(emoji)) {
+                      uniqueEmotions.add(emoji);
+                      if (uniqueEmotions.length == 2) break;
+                    }
+                  }
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: (events as List<DiaryEntry>)
-                        .map((e) => Text(
-                              _emotions[e.emotion] ?? '',
-                              style: const TextStyle(fontSize: 16),
+                    children: uniqueEmotions
+                        .map((emoji) => Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 1),
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 16),
+                              ),
                             ))
                         .toList(),
                   );
@@ -816,8 +828,8 @@ class DiaryDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Emotion: ${_emotions[entry.emotion] ?? ''} ${entry.emotion}',
-              style: const TextStyle(fontSize: 18),
+              '${_emotions[entry.emotion] ?? ''} ${entry.date}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
             Text(entry.description, style: const TextStyle(fontSize: 18)),
