@@ -56,7 +56,6 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  // Move entries here
   List<DiaryEntry> _entries = [];
 
   void _addEntry(DiaryEntry entry) {
@@ -77,35 +76,16 @@ class _MainNavigationState extends State<MainNavigation> {
     });
   }
 
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = [
-      // Pass entries and methods to HomePage
-      HomePage(
-        entries: _entries,
-        onAdd: _addEntry,
-        onEdit: _editEntry,
-        onDelete: _deleteEntry,
-      ),
-      const PlaceholderWidget(label: "Reserved 1"),
-      const SizedBox.shrink(),
-      const PlaceholderWidget(label: "Reserved 2"),
-      SettingsPage(
-        isDarkMode: widget.isDarkMode,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-    ];
-  }
-
   void _onItemTapped(int index) async {
     if (index == 2) {
-      await Navigator.push(
+      final result = await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const AddDiaryPage()),
       );
+      if (result is DiaryEntry) {
+        _addEntry(result);
+      }
+      // Do not change the selected tab
       return;
     }
     setState(() {
@@ -123,8 +103,25 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    // Build pages here so HomePage always gets the latest _entries
+    final pages = [
+      HomePage(
+        entries: _entries,
+        onAdd: _addEntry,
+        onEdit: _editEntry,
+        onDelete: _deleteEntry,
+      ),
+      const PlaceholderWidget(label: "Reserved 1"),
+      const SizedBox.shrink(),
+      const PlaceholderWidget(label: "Reserved 2"),
+      SettingsPage(
+        isDarkMode: widget.isDarkMode,
+        onThemeChanged: widget.onThemeChanged,
+      ),
+    ];
+
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: _navItems,
         currentIndex: _selectedIndex,
@@ -229,12 +226,6 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openAddDiary(context),
-        tooltip: 'Add Diary Entry',
-        elevation: 0,
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
