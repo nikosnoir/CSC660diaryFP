@@ -31,6 +31,30 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   DiaryEntry? _recentlyDeletedEntry;
+  String _sortOption = 'Newest';
+
+  List<DiaryEntry> get _sortedEntries {
+    List<DiaryEntry> sorted = List.from(widget.entries);
+    if (_sortOption == 'Newest') {
+      sorted.sort((a, b) => _parseDate(b.date).compareTo(_parseDate(a.date)));
+    } else if (_sortOption == 'Oldest') {
+      sorted.sort((a, b) => _parseDate(a.date).compareTo(_parseDate(b.date)));
+    } else if (_sortOption == 'Emotion A-Z') {
+      sorted.sort((a, b) => a.emotion.compareTo(b.emotion));
+    } else if (_sortOption == 'Latest Add') {
+      sorted = List.from(widget.entries); // Reverse add order
+    }
+    return sorted;
+  }
+
+  DateTime _parseDate(String dateStr) {
+    final parts = dateStr.split('/');
+    return DateTime(
+      int.parse(parts[2]),
+      int.parse(parts[1]),
+      int.parse(parts[0]),
+    );
+  }
 
   void _handleDeleteWithUndo(DiaryEntry entry) {
     setState(() {
@@ -59,7 +83,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final entries = widget.entries;
+    final entries = _sortedEntries;
 
     return Scaffold(
       drawer: Drawer(
@@ -112,6 +136,25 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                       ),
+                      const Spacer(),
+                      DropdownButton<String>(
+                        value: _sortOption,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        dropdownColor: Theme.of(context).colorScheme.surface,
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.arrow_drop_down),
+                        items: const [
+                          DropdownMenuItem(value: 'Newest', child: Text('Newest')),
+                          DropdownMenuItem(value: 'Oldest', child: Text('Oldest')),
+                          DropdownMenuItem(value: 'Emotion A-Z', child: Text('Emotion A-Z')),
+                          DropdownMenuItem(value: 'Latest Add', child: Text('Latest Add')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _sortOption = value);
+                          }
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -160,33 +203,23 @@ class _HomePageState extends State<HomePage> {
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer
-                                  .withOpacity(0.9),
+                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Row(
                               children: [
                                 Text(
-                                  emotions[entry.emotion] ??
-                                      emotions['Neutral'] ??
-                                      '😐',
+                                  emotions[entry.emotion] ?? emotions['Neutral'] ?? '😐',
                                   style: const TextStyle(fontSize: 28),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(entry.date,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold)),
+                                      Text(entry.date, style: const TextStyle(fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 4),
-                                      Text(entry.title,
-                                          style:
-                                              const TextStyle(fontSize: 16)),
+                                      Text(entry.title, style: const TextStyle(fontSize: 16)),
                                       const SizedBox(height: 4),
                                       Text(
                                         entry.description,
@@ -255,8 +288,7 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          ProfilePage(entries: widget.entries),
+                      builder: (_) => ProfilePage(entries: widget.entries),
                     ),
                   );
                 },
