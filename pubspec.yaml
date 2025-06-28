@@ -13,6 +13,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   lottie: ^3.1.0
   table_calendar: ^3.0.9
+  fl_chart: ^0.66.2
 
 dev_dependencies:
   flutter_test:
