@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'home_page.dart';
-import 'calendar_page.dart';
-import 'settings_page.dart';
-import 'add_diary_page.dart';
-import 'emotions.dart';
-
-String _emotion = emotions.keys.first;
 
 void main() {
   runApp(const MyApp());
@@ -14,16 +8,14 @@ void main() {
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _isDarkMode = false;
-  int _selectedIndex = 0;
+  bool _isDarkMode = true;
   List<DiaryEntry> _entries = [];
-
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   void _addEntry(DiaryEntry entry) {
     setState(() {
@@ -31,44 +23,24 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
-  void _editEntry(int index, DiaryEntry entry) {
+  void _editEntry(String id, DiaryEntry updated) {
     setState(() {
-      _entries[index] = entry;
+      final index = _entries.indexWhere((e) => e.id == id);
+      if (index != -1) {
+        _entries[index] = updated;
+      }
     });
   }
 
-  void _deleteEntry(int index) {
+  void _deleteEntryById(String id) {
     setState(() {
-      _entries.removeAt(index);
+      _entries.removeWhere((entry) => entry.id == id);
     });
   }
-
-  static const List<BottomNavigationBarItem> _navItems = [
-    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-    BottomNavigationBarItem(icon: Icon(Icons.add_box), label: 'Add'),
-    BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Calendar'),
-    BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      HomePage(
-        entries: _entries,
-        onAdd: _addEntry,
-        onEdit: _editEntry,
-        onDelete: _deleteEntry,
-      ),
-      const SizedBox.shrink(), // Add handled by navigation
-      CalendarPage(entries: _entries),
-      SettingsPage(
-        isDarkMode: _isDarkMode,
-        onThemeChanged: (val) => setState(() => _isDarkMode = val),
-      ),
-    ];
-
     return MaterialApp(
-      navigatorKey: _navigatorKey,
       title: 'Diary App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
@@ -81,34 +53,15 @@ class _MyAppState extends State<MyApp> {
         brightness: Brightness.dark,
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: Scaffold(
-        body: pages[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          items: _navItems,
-          currentIndex: _selectedIndex,
-          onTap: (index) async {
-            if (index == 1) {
-              final result = await _navigatorKey.currentState!.push(
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => const AddDiaryPage(),
-                  transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
-                ),
-              );
-              if (result is DiaryEntry) {
-                _addEntry(result);
-              }
-              return;
-            }
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-        ),
-      ),
       debugShowCheckedModeBanner: false,
+      home: HomePage(
+        entries: _entries,
+        onAdd: _addEntry,
+        onEdit: _editEntry,
+        onDeleteById: _deleteEntryById,
+        isDarkMode: _isDarkMode,
+        onThemeChanged: (val) => setState(() => _isDarkMode = val),
+      ),
     );
   }
 }

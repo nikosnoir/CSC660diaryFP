@@ -19,7 +19,7 @@ class DiaryDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(entry.title),
+        title: const Text('Diary Details'),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -32,15 +32,37 @@ class DiaryDetailPage extends StatelessWidget {
               );
               if (result is DiaryEntry) {
                 onEdit(result);
-                Navigator.pop(context);
+                Navigator.pop(context); // Go back after editing
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: () {
-              onDelete();
-              Navigator.pop(context, 'deleted');
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Delete'),
+                  content: const Text('Are you sure you want to delete this diary entry?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                onDelete();
+
+                // Remove all pages until HomePage
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
             },
           ),
         ],
@@ -55,7 +77,15 @@ class DiaryDetailPage extends StatelessWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
-            Text(entry.description, style: const TextStyle(fontSize: 18)),
+            Text(
+              entry.title,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              entry.description,
+              style: const TextStyle(fontSize: 18),
+            ),
           ],
         ),
       ),

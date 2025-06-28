@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'emotions.dart';
+import 'package:uuid/uuid.dart';
 
 class AddDiaryPage extends StatefulWidget {
   final DiaryEntry? entry;
@@ -30,9 +31,9 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
       final parts = widget.entry!.date.split('/');
       if (parts.length == 3) {
         _selectedDate = DateTime(
-          int.parse(parts[2]), // year
-          int.parse(parts[1]), // month
-          int.parse(parts[0]), // day
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
         );
       }
     }
@@ -40,66 +41,66 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Diary Entry')),
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: const Text(''),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  final entry = DiaryEntry(
+                    id: widget.entry?.id ?? const Uuid().v4(),
+                    title: _title,
+                    description: _description,
+                    date:
+                        "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
+                    emotion: _emotion,
+                  );
+                  Navigator.pop(context, entry);
+                }
+              },
+              child: const Text("Save"),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
-              DropdownButtonFormField<String>(
-                value: _emotion,
-                decoration: const InputDecoration(
-                  labelText: 'Emotion',
-                  border: OutlineInputBorder(),
-                ),
-                items: emotions.keys
-                    .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text('${emotions[e]} $e'),
-                        ))
-                    .toList(),
-                onChanged: (val) => setState(() => _emotion = val!),
-                onSaved: (val) => _emotion = val ?? emotions.keys.first,
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Please select an emotion' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Title',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: _title,
-                onSaved: (val) => _title = val ?? '',
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Please enter a title' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 5,
-                initialValue: _description,
-                onSaved: (val) => _description = val ?? '',
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Please enter a description' : null,
-              ),
-              const SizedBox(height: 16),
+              // Date and Emoji Row
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Text(
-                      "Date: ${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
-                      style: const TextStyle(fontSize: 16),
+                  Text(
+                    "${_selectedDate.day.toString().padLeft(2, '0')} "
+                    "${_selectedDate.monthName()}, ${_selectedDate.year}",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
                     ),
                   ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.calendar_today),
-                    label: const Text("Pick Date"),
+                  const SizedBox(width: 8),
+                  IconButton(
                     onPressed: () async {
                       final picked = await showDatePicker(
                         context: context,
@@ -113,26 +114,73 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
                         });
                       }
                     },
+                    icon: const Icon(Icons.arrow_drop_down, size: 28),
+                    color: textColor,
                   ),
+                  const Spacer(),
+                  CircleAvatar(
+                    backgroundColor: Colors.transparent,
+                    child: Text(
+                      emotions[_emotion] ?? '😐',
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                  )
                 ],
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _formKey.currentState!.save();
-                      final entry = DiaryEntry(
-                        title: _title,
-                        description: _description,
-                        date: "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
-                        emotion: _emotion, // _emotion should be 'Happy', 'Sad', etc.
-                      );
-                      Navigator.pop(context, entry);
-                    }
-                  },
-                  child: const Text('Save Entry'),
+
+              const SizedBox(height: 16),
+
+              // Emotion Dropdown (hidden, but value still used)
+              DropdownButtonFormField<String>(
+                value: _emotion,
+                decoration: const InputDecoration(
+                  labelText: 'Emotion',
+                  border: OutlineInputBorder(),
+                ),
+                items: emotions.keys
+                    .map((e) => DropdownMenuItem(
+                          value: e,
+                          child: Text('${emotions[e]} $e'),
+                        ))
+                    .toList(),
+                onChanged: (val) => setState(() => _emotion = val!),
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Please select an emotion' : null,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Title
+              TextFormField(
+                decoration: InputDecoration(
+                  hintText: 'Title',
+                  hintStyle: TextStyle(color: textColor?.withOpacity(0.5)),
+                  border: InputBorder.none,
+                ),
+                style: TextStyle(fontSize: 18, color: textColor),
+                initialValue: _title,
+                onSaved: (val) => _title = val ?? '',
+                validator: (val) =>
+                    val == null || val.isEmpty ? 'Please enter a title' : null,
+              ),
+              const Divider(),
+
+              // Description
+              Expanded(
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    hintText: 'Write more here...',
+                    hintStyle: TextStyle(color: textColor?.withOpacity(0.4)),
+                    border: InputBorder.none,
+                  ),
+                  initialValue: _description,
+                  onSaved: (val) => _description = val ?? '',
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Please enter a description' : null,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: null,
+                  expands: true,
+                  style: TextStyle(fontSize: 16, color: textColor),
                 ),
               ),
             ],
@@ -140,5 +188,16 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
         ),
       ),
     );
+  }
+}
+
+// Extension for month name formatting
+extension MonthName on DateTime {
+  String monthName() {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[this.month - 1];
   }
 }

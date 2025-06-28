@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'emotions.dart';
+import 'diary_detail_page.dart';
 
 class DiaryListPage extends StatelessWidget {
   final List<DiaryEntry> entries;
@@ -26,15 +27,57 @@ class DiaryListPage extends StatelessWidget {
               separatorBuilder: (_, __) => const Divider(),
               itemBuilder: (context, index) {
                 final entry = entries[index];
-                print('entry.emotion: "${entry.emotion}"');
-                return ListTile(
-                  leading: Text(
-                    emotions[entry.emotion] ?? emotions['Neutral'] ?? '😐',
-                    style: const TextStyle(fontSize: 28),
+
+                return Dismissible(
+                  key: Key('${entry.title}_${entry.date}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  title: Text(entry.title),
-                  subtitle: Text('${entry.date}\n${entry.description}'),
-                  // Optionally, add edit/delete actions here
+                  confirmDismiss: (direction) async {
+                    return await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Entry'),
+                        content: const Text('Are you sure you want to delete this diary entry?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete')),
+                        ],
+                      ),
+                    );
+                  },
+                  onDismissed: (direction) {
+                    onDelete(index);
+                  },
+                  child: ListTile(
+                    leading: Text(
+                      emotions[entry.emotion] ?? emotions['Neutral'] ?? '😐',
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                    title: Text(entry.title),
+                    subtitle: Text('${entry.date}\n${entry.description}'),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DiaryDetailPage(
+                            entry: entry,
+                            onEdit: (updatedEntry) {
+                              onEdit(index, updatedEntry);
+                            },
+                            onDelete: () {
+                              onDelete(index);
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             ),
