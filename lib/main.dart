@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'home_page.dart';
+import 'db_helper.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,26 +17,35 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = true;
   List<DiaryEntry> _entries = [];
+  bool _isLoading = true;
 
-  void _addEntry(DiaryEntry entry) {
+  @override
+  void initState() {
+    super.initState();
+    _loadEntriesFromDB();
+  }
+
+  Future<void> _loadEntriesFromDB() async {
+    final loadedEntries = await DBHelper.getEntries();
     setState(() {
-      _entries.insert(0, entry);
+      _entries = loadedEntries;
+      _isLoading = false;
     });
   }
 
-  void _editEntry(String id, DiaryEntry updated) {
-    setState(() {
-      final index = _entries.indexWhere((e) => e.id == id);
-      if (index != -1) {
-        _entries[index] = updated;
-      }
-    });
+  Future<void> _addEntry(DiaryEntry entry) async {
+    await DBHelper.insertEntry(entry);
+    _loadEntriesFromDB();
   }
 
-  void _deleteEntryById(String id) {
-    setState(() {
-      _entries.removeWhere((entry) => entry.id == id);
-    });
+  Future<void> _editEntry(String id, DiaryEntry updated) async {
+    await DBHelper.updateEntry(updated);
+    _loadEntriesFromDB();
+  }
+
+  Future<void> _deleteEntryById(String id) async {
+    await DBHelper.deleteEntry(id);
+    _loadEntriesFromDB();
   }
 
   @override
@@ -54,14 +64,18 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: HomePage(
-        entries: _entries,
-        onAdd: _addEntry,
-        onEdit: _editEntry,
-        onDeleteById: _deleteEntryById,
-        isDarkMode: _isDarkMode,
-        onThemeChanged: (val) => setState(() => _isDarkMode = val),
-      ),
+      home: _isLoading
+          ? const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            )
+          : HomePage(
+              entries: _entries,
+              onAdd: _addEntry,
+              onEdit: _editEntry,
+              onDeleteById: _deleteEntryById,
+              isDarkMode: _isDarkMode,
+              onThemeChanged: (val) => setState(() => _isDarkMode = val),
+            ),
     );
   }
 }

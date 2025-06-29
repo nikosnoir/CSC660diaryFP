@@ -6,6 +6,7 @@ import 'diary_entry.dart';
 import 'diary_detail_page.dart';
 import 'add_diary_page.dart';
 import 'emotions.dart';
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   final List<DiaryEntry> entries;
@@ -69,7 +70,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       drawer: Drawer(
-        child: ListView(
+        child: Column(
           children: [
             const DrawerHeader(
               child: Center(child: Text('Menu', style: TextStyle(fontSize: 24))),
@@ -90,6 +91,30 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
+            const Spacer(),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => LoginPage(
+                      onLogin: () => HomePage(
+                        entries: widget.entries,
+                        onAdd: widget.onAdd,
+                        onEdit: widget.onEdit,
+                        onDeleteById: widget.onDeleteById,
+                        isDarkMode: widget.isDarkMode,
+                        onThemeChanged: widget.onThemeChanged,
+                      ),
+                    ),
+                  ),
+                  (route) => false,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -122,7 +147,7 @@ class _HomePageState extends State<HomePage> {
                         items: const [
                           DropdownMenuItem(value: 'Latest Add', child: Text('Latest Add')),
                           DropdownMenuItem(value: 'Date', child: Text('Date')),
-                          DropdownMenuItem(value: 'Last Edited', child: Text('Last Edited')),
+                          DropdownMenuItem(value: 'Last Edited', child: Text('Recent Add')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => _sortOption = val);

@@ -97,6 +97,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
                   _formKey.currentState!.save();
+
                   final entry = DiaryEntry(
                     id: widget.entry?.id ?? const Uuid().v4(),
                     title: _title,
@@ -104,7 +105,9 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
                     date:
                         "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
                     emotion: _emotion,
+                    updatedAt: DateTime.now(),
                   );
+
                   Navigator.pop(context, entry);
                 }
               },
@@ -119,13 +122,12 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
           key: _formKey,
           child: Column(
             children: [
-              // Date and Emoji Row
+              // Date + Emotion Row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    "${_selectedDate.day.toString().padLeft(2, '0')} "
-                    "${_selectedDate.monthName()}, ${_selectedDate.year}",
+                    "${_selectedDate.day.toString().padLeft(2, '0')} ${_selectedDate.monthName()}, ${_selectedDate.year}",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -166,7 +168,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
 
               const SizedBox(height: 16),
 
-              // Title
+              // Title Input
               TextFormField(
                 decoration: InputDecoration(
                   hintText: 'Title',
@@ -181,7 +183,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
               ),
               const Divider(),
 
-              // Description
+              // Description Input
               Expanded(
                 child: TextFormField(
                   decoration: InputDecoration(
@@ -207,7 +209,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
   }
 }
 
-// Extension for month name formatting
+// Extension to format month name from number
 extension MonthName on DateTime {
   String monthName() {
     const months = [
