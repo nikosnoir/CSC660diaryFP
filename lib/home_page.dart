@@ -30,60 +30,42 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  DiaryEntry? _recentlyDeletedEntry;
-  String _sortOption = 'Newest';
+  String _sortOption = 'Latest Add';
 
   List<DiaryEntry> get _sortedEntries {
     List<DiaryEntry> sorted = List.from(widget.entries);
-    if (_sortOption == 'Newest') {
+    if (_sortOption == 'Latest Add') {
+      sorted = sorted.reversed.toList();
+    } else if (_sortOption == 'Date') {
       sorted.sort((a, b) => _parseDate(b.date).compareTo(_parseDate(a.date)));
-    } else if (_sortOption == 'Oldest') {
-      sorted.sort((a, b) => _parseDate(a.date).compareTo(_parseDate(b.date)));
-    } else if (_sortOption == 'Emotion A-Z') {
-      sorted.sort((a, b) => a.emotion.compareTo(b.emotion));
-    } else if (_sortOption == 'Latest Add') {
-      sorted = List.from(widget.entries); // Reverse add order
+    } else if (_sortOption == 'Last Edited') {
+      sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     }
     return sorted;
   }
 
   DateTime _parseDate(String dateStr) {
     final parts = dateStr.split('/');
-    return DateTime(
-      int.parse(parts[2]),
-      int.parse(parts[1]),
-      int.parse(parts[0]),
-    );
+    return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
   }
 
-  void _handleDeleteWithUndo(DiaryEntry entry) {
-    setState(() {
-      _recentlyDeletedEntry = entry;
-      widget.onDeleteById(entry.id);
-    });
-
+  void _showUndoSnackBar(DiaryEntry entry) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Entry deleted'),
+        content: Text('Deleted "${entry.title}"'),
         action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            if (_recentlyDeletedEntry != null) {
-              widget.onAdd(_recentlyDeletedEntry!);
-              setState(() {
-                _recentlyDeletedEntry = null;
-              });
-            }
-          },
+          label: 'UNDO',
+          onPressed: () => widget.onAdd(entry),
         ),
-        duration: const Duration(seconds: 5),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final entries = _sortedEntries;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgImage = AssetImage(isDark ? 'assets/bg_dark.jpg' : 'assets/bg_light.jpg');
 
     return Scaffold(
       drawer: Drawer(
@@ -114,9 +96,9 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage('assets/bg.jpg'),
+                image: bgImage,
                 fit: BoxFit.cover,
               ),
             ),
@@ -127,32 +109,23 @@ class _HomePageState extends State<HomePage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Builder(
                         builder: (context) => IconButton(
                           icon: const Icon(Icons.menu),
-                          onPressed: () {
-                            Scaffold.of(context).openDrawer();
-                          },
+                          onPressed: () => Scaffold.of(context).openDrawer(),
                         ),
                       ),
-                      const Spacer(),
                       DropdownButton<String>(
                         value: _sortOption,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        dropdownColor: Theme.of(context).colorScheme.surface,
-                        underline: const SizedBox(),
-                        icon: const Icon(Icons.arrow_drop_down),
                         items: const [
-                          DropdownMenuItem(value: 'Newest', child: Text('Newest')),
-                          DropdownMenuItem(value: 'Oldest', child: Text('Oldest')),
-                          DropdownMenuItem(value: 'Emotion A-Z', child: Text('Emotion A-Z')),
                           DropdownMenuItem(value: 'Latest Add', child: Text('Latest Add')),
+                          DropdownMenuItem(value: 'Date', child: Text('Date')),
+                          DropdownMenuItem(value: 'Last Edited', child: Text('Last Edited')),
                         ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _sortOption = value);
-                          }
+                        onChanged: (val) {
+                          if (val != null) setState(() => _sortOption = val);
                         },
                       ),
                     ],
@@ -161,24 +134,21 @@ class _HomePageState extends State<HomePage> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: entries.length,
+                    itemCount: _sortedEntries.length,
                     itemBuilder: (context, index) {
-                      final entry = entries[index];
+                      final entry = _sortedEntries[index];
                       return Dismissible(
                         key: Key(entry.id),
                         direction: DismissDirection.endToStart,
                         background: Container(
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          color: Colors.red,
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        onDismissed: (direction) {
-                          _handleDeleteWithUndo(entry);
+                        onDismissed: (_) {
+                          widget.onDeleteById(entry.id);
+                          _showUndoSnackBar(entry);
                         },
                         child: GestureDetector(
                           onTap: () async {
@@ -254,7 +224,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () async {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => AddDiaryPage()),
+              MaterialPageRoute(builder: (_) => const AddDiaryPage()),
             );
             if (result is DiaryEntry) {
               widget.onAdd(result);
@@ -273,24 +243,14 @@ class _HomePageState extends State<HomePage> {
               IconButton(
                 icon: const Icon(Icons.calendar_month),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CalendarPage(entries: widget.entries),
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => CalendarPage(entries: widget.entries)));
                 },
               ),
               const SizedBox(width: 60),
               IconButton(
                 icon: const Icon(Icons.person),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfilePage(entries: widget.entries),
-                    ),
-                  );
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(entries: widget.entries)));
                 },
               ),
             ],

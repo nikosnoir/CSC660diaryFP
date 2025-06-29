@@ -39,6 +39,39 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
     }
   }
 
+  void _selectEmotion() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          height: 250,
+          child: GridView.count(
+            crossAxisCount: 5,
+            children: emotions.entries.map((entry) {
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _emotion = entry.key;
+                  });
+                  Navigator.pop(context);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(entry.value, style: const TextStyle(fontSize: 26)),
+                    const SizedBox(height: 4),
+                    Text(entry.key, style: const TextStyle(fontSize: 10)),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -118,34 +151,17 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
                     color: textColor,
                   ),
                   const Spacer(),
-                  CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    child: Text(
-                      emotions[_emotion] ?? '😐',
-                      style: const TextStyle(fontSize: 28),
+                  GestureDetector(
+                    onTap: _selectEmotion,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.transparent,
+                      child: Text(
+                        emotions[_emotion] ?? '😐',
+                        style: const TextStyle(fontSize: 28),
+                      ),
                     ),
                   )
                 ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Emotion Dropdown (hidden, but value still used)
-              DropdownButtonFormField<String>(
-                value: _emotion,
-                decoration: const InputDecoration(
-                  labelText: 'Emotion',
-                  border: OutlineInputBorder(),
-                ),
-                items: emotions.keys
-                    .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text('${emotions[e]} $e'),
-                        ))
-                    .toList(),
-                onChanged: (val) => setState(() => _emotion = val!),
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Please select an emotion' : null,
               ),
 
               const SizedBox(height: 16),
