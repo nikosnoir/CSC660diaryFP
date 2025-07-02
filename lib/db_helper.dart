@@ -1,31 +1,33 @@
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
 import 'diary_entry.dart';
 
 class DBHelper {
+  static final DBHelper _instance = DBHelper._internal();
+  factory DBHelper() => _instance;
+  DBHelper._internal();
+
   static Database? _db;
 
-  static Future<Database> get database async {
-    if (_db != null) return _db!;
-    _db = await _initDB();
-    return _db!;
+  Future<Database> get db async {
+    return _db ??= await _initDb();
   }
 
-  static Future<Database> _initDB() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'diary.db');
-
+  Future<Database> _initDb() async {
+    final path = join(await getDatabasesPath(), 'diary.db');
     return await openDatabase(
       path,
-      version: 1,
-      onCreate: (db, version) {
-        return db.execute('''
-          CREATE TABLE entries(
+      version: 2, // version bumped for schema updates
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE entries (
             id TEXT PRIMARY KEY,
             title TEXT,
             description TEXT,
             date TEXT,
             emotion TEXT,
+            user TEXT,
+            createdAt TEXT,
             updatedAt TEXT
           )
         ''');
@@ -33,29 +35,38 @@ class DBHelper {
     );
   }
 
-  static Future<void> insertEntry(DiaryEntry entry) async {
-    final db = await database;
-    await db.insert('entries', entry.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> insertEntry(DiaryEntry entry) async {
+    final database = await db;
+    await database.insert(
+      'entries',
+      entry.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  static Future<void> updateEntry(DiaryEntry entry) async {
-    final db = await database;
-    await db.update(
+  Future<List<DiaryEntry>> getEntries(String user) async {
+    final database = await db;
+    final maps = await database.query(
+      'entries',
+      where: 'user = ?',
+      whereArgs: [user],
+      orderBy: 'updatedAt DESC',
+    );
+    return maps.map((map) => DiaryEntry.fromMap(map)).toList();
+  }
+
+  Future<void> deleteEntry(String id) async {
+    final database = await db;
+    await database.delete('entries', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> updateEntry(DiaryEntry entry) async {
+    final database = await db;
+    await database.update(
       'entries',
       entry.toMap(),
       where: 'id = ?',
       whereArgs: [entry.id],
     );
-  }
-
-  static Future<void> deleteEntry(String id) async {
-    final db = await database;
-    await db.delete('entries', where: 'id = ?', whereArgs: [id]);
-  }
-
-  static Future<List<DiaryEntry>> getEntries() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('entries');
-    return maps.map((map) => DiaryEntry.fromMap(map)).toList();
   }
 }

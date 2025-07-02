@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'db_helper.dart';
 import 'diary_entry.dart';
 import 'home_page.dart';
-import 'db_helper.dart';
+import 'login_page.dart';
+import 'globals.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -15,43 +20,18 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  bool _isDarkMode = true;
-  List<DiaryEntry> _entries = [];
-  bool _isLoading = true;
+  bool _isDarkMode = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadEntriesFromDB();
-  }
-
-  Future<void> _loadEntriesFromDB() async {
-    final loadedEntries = await DBHelper.getEntries();
+  void _handleLogin(String email) {
     setState(() {
-      _entries = loadedEntries;
-      _isLoading = false;
+      currentUserEmail = email;
     });
-  }
-
-  Future<void> _addEntry(DiaryEntry entry) async {
-    await DBHelper.insertEntry(entry);
-    _loadEntriesFromDB();
-  }
-
-  Future<void> _editEntry(String id, DiaryEntry updated) async {
-    await DBHelper.updateEntry(updated);
-    _loadEntriesFromDB();
-  }
-
-  Future<void> _deleteEntryById(String id) async {
-    await DBHelper.deleteEntry(id);
-    _loadEntriesFromDB();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Diary App',
+      title: 'My Diary',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -64,18 +44,76 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: _isLoading
-          ? const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            )
-          : HomePage(
-              entries: _entries,
-              onAdd: _addEntry,
-              onEdit: _editEntry,
-              onDeleteById: _deleteEntryById,
+      home: currentUserEmail.isEmpty
+          ? LoginPage(onLogin: _handleLogin)
+          : HomeWrapper(
               isDarkMode: _isDarkMode,
               onThemeChanged: (val) => setState(() => _isDarkMode = val),
             ),
     );
+  }
+}
+
+class HomeWrapper extends StatefulWidget {
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
+
+  const HomeWrapper({
+    super.key,
+    required this.isDarkMode,
+    required this.onThemeChanged,
+  });
+
+  @override
+  State<HomeWrapper> createState() => _HomeWrapperState();
+}
+
+class _HomeWrapperState extends State<HomeWrapper> {
+  List<DiaryEntry> _entries = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEntries();
+  }
+
+  Future<void> _loadEntries() async {
+    if (currentUserEmail.isNotEmpty) {
+      final loaded = await DBHelper().getEntries(currentUserEmail);
+      setState(() {
+        _entries = loaded;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _addEntry(DiaryEntry entry) async {
+    await DBHelper().insertEntry(entry);
+    _loadEntries();
+  }
+
+  Future<void> _editEntry(String id, DiaryEntry updated) async {
+    await DBHelper().updateEntry(updated);
+    _loadEntries();
+  }
+
+  Future<void> _deleteEntry(String id) async {
+    await DBHelper().deleteEntry(id);
+    _loadEntries();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _isLoading
+        ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+        : HomePage(
+            entries: _entries,
+            onAdd: _addEntry,
+            onEdit: _editEntry,
+            onDeleteById: _deleteEntry,
+            isDarkMode: widget.isDarkMode,
+            onThemeChanged: widget.onThemeChanged,
+          );
   }
 }

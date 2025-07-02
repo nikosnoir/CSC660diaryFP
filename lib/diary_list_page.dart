@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'emotions.dart';
-import 'diary_detail_page.dart';
 
 class DiaryListPage extends StatelessWidget {
   final List<DiaryEntry> entries;
@@ -61,21 +60,6 @@ class DiaryListPage extends StatelessWidget {
                     title: Text(entry.title),
                     subtitle: Text('${entry.date}\n${entry.description}'),
                     onTap: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DiaryDetailPage(
-                            entry: entry,
-                            onEdit: (updatedEntry) {
-                              onEdit(index, updatedEntry);
-                            },
-                            onDelete: () {
-                              onDelete(index);
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                      );
                     },
                   ),
                 );

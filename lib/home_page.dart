@@ -7,6 +7,7 @@ import 'diary_detail_page.dart';
 import 'add_diary_page.dart';
 import 'emotions.dart';
 import 'login_page.dart';
+import 'daily_quotes.dart'; // getQuoteOfTheDay()
 
 class HomePage extends StatefulWidget {
   final List<DiaryEntry> entries;
@@ -31,18 +32,32 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _sortOption = 'Latest Add';
+  String _sortOption = 'Newest';
+  String _searchQuery = '';
+  String? _selectedEmotion;
 
-  List<DiaryEntry> get _sortedEntries {
-    List<DiaryEntry> sorted = List.from(widget.entries);
-    if (_sortOption == 'Latest Add') {
-      sorted = sorted.reversed.toList();
-    } else if (_sortOption == 'Date') {
-      sorted.sort((a, b) => _parseDate(b.date).compareTo(_parseDate(a.date)));
-    } else if (_sortOption == 'Last Edited') {
-      sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  List<DiaryEntry> get _filteredEntries {
+    List<DiaryEntry> entries = List.from(widget.entries);
+
+    if (_selectedEmotion != null) {
+      entries = entries.where((e) => e.emotion == _selectedEmotion).toList();
     }
-    return sorted;
+
+    if (_searchQuery.isNotEmpty) {
+      entries = entries.where((e) =>
+        e.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        e.description.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    }
+
+    if (_sortOption == 'Newest') {
+      entries = entries.reversed.toList();
+    } else if (_sortOption == 'Oldest') {
+      entries.sort((a, b) => _parseDate(a.date).compareTo(_parseDate(b.date)));
+    } else if (_sortOption == 'Recently Edited') {
+      entries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    }
+
+    return entries;
   }
 
   DateTime _parseDate(String dateStr) {
@@ -67,6 +82,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgImage = AssetImage(isDark ? 'assets/bg_dark.jpg' : 'assets/bg_light.jpg');
+    final quoteOfDay = getQuoteOfTheDay();
 
     return Scaffold(
       drawer: Drawer(
@@ -100,17 +116,26 @@ class _HomePageState extends State<HomePage> {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                     builder: (_) => LoginPage(
-                      onLogin: () => HomePage(
-                        entries: widget.entries,
-                        onAdd: widget.onAdd,
-                        onEdit: widget.onEdit,
-                        onDeleteById: widget.onDeleteById,
-                        isDarkMode: widget.isDarkMode,
-                        onThemeChanged: widget.onThemeChanged,
-                      ),
-                    ),
+                    onLogin: (email) {
+                      // Replace this with navigation back to your main or wrapper
+                      // This example pushes the LoginPage and assumes login success will redirect.
+                      // If you have an app state or main page wrapper, navigate there instead.
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => HomePage(
+                            entries: [],
+                            onAdd: widget.onAdd,
+                            onEdit: widget.onEdit,
+                            onDeleteById: widget.onDeleteById,
+                            isDarkMode: widget.isDarkMode,
+                            onThemeChanged: widget.onThemeChanged,
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  (route) => false,
+                ),
+                (route) => false,
                 );
               },
             ),
@@ -130,11 +155,25 @@ class _HomePageState extends State<HomePage> {
           ),
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Daily Quote
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    '"$quoteOfDay"',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontStyle: FontStyle.italic,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ),
+
+                // Top bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Builder(
                         builder: (context) => IconButton(
@@ -142,12 +181,13 @@ class _HomePageState extends State<HomePage> {
                           onPressed: () => Scaffold.of(context).openDrawer(),
                         ),
                       ),
+                      const Spacer(),
                       DropdownButton<String>(
                         value: _sortOption,
                         items: const [
-                          DropdownMenuItem(value: 'Latest Add', child: Text('Latest Add')),
-                          DropdownMenuItem(value: 'Date', child: Text('Date')),
-                          DropdownMenuItem(value: 'Last Edited', child: Text('Recent Add')),
+                          DropdownMenuItem(value: 'Newest', child: Text('Latest Add')),
+                          DropdownMenuItem(value: 'Oldest', child: Text('Date')),
+                          DropdownMenuItem(value: 'Recently Edited', child: Text('Recent Edit')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => _sortOption = val);
@@ -156,81 +196,122 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _sortedEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = _sortedEntries[index];
-                      return Dismissible(
-                        key: Key(entry.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        onDismissed: (_) {
-                          widget.onDeleteById(entry.id);
-                          _showUndoSnackBar(entry);
-                        },
-                        child: GestureDetector(
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DiaryDetailPage(
-                                  entry: entry,
-                                  onEdit: (updated) => widget.onEdit(entry.id, updated),
-                                  onDelete: () {
-                                    widget.onDeleteById(entry.id);
-                                    Navigator.pop(context, 'deleted');
-                                  },
-                                ),
-                              ),
-                            );
-                            if (result == 'deleted') {
-                              widget.onDeleteById(entry.id);
-                            }
+
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search diary...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                      filled: true,
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+                    },
+                  ),
+                ),
+
+                // Mood Filter
+                SizedBox(
+                  height: 60,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children: emotions.entries.map((e) {
+                      final selected = _selectedEmotion == e.key;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(e.value, style: const TextStyle(fontSize: 20)),
+                          selected: selected,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedEmotion = selected ? null : e.key;
+                            });
                           },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  emotions[entry.emotion] ?? emotions['Neutral'] ?? '😐',
-                                  style: const TextStyle(fontSize: 28),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Diary list
+                Expanded(
+                  child: _filteredEntries.isEmpty
+                      ? const Center(child: Text("No diary entries found."))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _filteredEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = _filteredEntries[index];
+                            return Dismissible(
+                              key: Key(entry.id),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                color: Colors.red,
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (_) {
+                                widget.onDeleteById(entry.id);
+                                _showUndoSnackBar(entry);
+                              },
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => DiaryDetailPage(
+                                        entry: entry,
+                                        onEdit: (updated) => widget.onEdit(entry.id, updated),
+                                        onDelete: () {
+                                          widget.onDeleteById(entry.id);
+                                          Navigator.pop(context, 'deleted');
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                  if (result == 'deleted') {
+                                    widget.onDeleteById(entry.id);
+                                  }
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(entry.date, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 4),
-                                      Text(entry.title, style: const TextStyle(fontSize: 16)),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        entry.description,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                      Text(emotions[entry.emotion] ?? '😐', style: const TextStyle(fontSize: 28)),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(entry.date, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                            const SizedBox(height: 4),
+                                            Text(entry.title, style: const TextStyle(fontSize: 16)),
+                                            const SizedBox(height: 4),
+                                            Text(entry.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),

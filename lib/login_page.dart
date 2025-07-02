@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
-  final Widget Function() onLogin;
+  final void Function(String email) onLogin;
 
   const LoginPage({super.key, required this.onLogin});
 
@@ -15,11 +14,11 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   void _login() {
-    if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => widget.onLogin()),
-      );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isNotEmpty && password.isNotEmpty) {
+      widget.onLogin(email);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter email and password')),
@@ -67,16 +66,6 @@ class _LoginPageState extends State<LoginPage> {
                   padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   child: Text('Login'),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SignupPage()),
-                  );
-                },
-                child: const Text('New user? Sign up'),
               ),
             ],
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'diary_entry.dart';
 import 'emotions.dart';
 import 'package:uuid/uuid.dart';
+import 'globals.dart'; // create this file to store currentUserEmail
 
 class AddDiaryPage extends StatefulWidget {
   final DiaryEntry? entry;
@@ -28,6 +29,7 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
       _emotion = emotions.keys.contains(widget.entry!.emotion)
           ? widget.entry!.emotion
           : 'Neutral';
+
       final parts = widget.entry!.date.split('/');
       if (parts.length == 3) {
         _selectedDate = DateTime(
@@ -74,7 +76,6 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
 
@@ -94,23 +95,28 @@ class _AddDiaryPageState extends State<AddDiaryPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _formKey.currentState!.save();
+                  onPressed: () {
+      if (_formKey.currentState!.validate()) {
+        _formKey.currentState!.save();
 
-                  final entry = DiaryEntry(
-                    id: widget.entry?.id ?? const Uuid().v4(),
-                    title: _title,
-                    description: _description,
-                    date:
-                        "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
-                    emotion: _emotion,
-                    updatedAt: DateTime.now(),
-                  );
+        final now = DateTime.now();
 
-                  Navigator.pop(context, entry);
-                }
-              },
+        final entry = DiaryEntry(
+          id: widget.entry?.id ?? const Uuid().v4(),
+          title: _title,
+          description: _description,
+          date: "${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.year}",
+          emotion: _emotion,
+          user: currentUserEmail ?? '',
+          createdAt: widget.entry?.createdAt ?? now,
+          updatedAt: now,
+        );
+
+
+        Navigator.pop(context, entry);
+      }
+    },
+
               child: const Text("Save"),
             ),
           ),
