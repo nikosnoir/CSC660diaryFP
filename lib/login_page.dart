@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'signup_page.dart';
+import 'globals.dart';
 
 class LoginPage extends StatefulWidget {
-  final void Function(String email) onLogin;
+  final Function(String) onLogin;
 
   const LoginPage({super.key, required this.onLogin});
 
@@ -12,6 +14,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _showPassword = false;
 
   void _login() {
     final email = _emailController.text.trim();
@@ -21,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
       widget.onLogin(email);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
+        const SnackBar(content: Text('Please enter both email and password')),
       );
     }
   }
@@ -36,12 +39,9 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.book_rounded, size: 80, color: Colors.blue),
+              const Icon(Icons.lock, size: 80, color: Colors.blue),
               const SizedBox(height: 16),
-              const Text(
-                'MyDiary',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
+              const Text('Login', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 32),
               TextField(
                 controller: _emailController,
@@ -53,10 +53,14 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: !_showPassword,
+                decoration: InputDecoration(
                   labelText: 'Password',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -66,6 +70,16 @@ class _LoginPageState extends State<LoginPage> {
                   padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   child: Text('Login'),
                 ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SignupPage()),
+                  );
+                },
+                child: const Text("Don't have an account? Sign up"),
               ),
             ],
           ),

@@ -6,8 +6,7 @@ import 'diary_entry.dart';
 import 'diary_detail_page.dart';
 import 'add_diary_page.dart';
 import 'emotions.dart';
-import 'login_page.dart';
-import 'daily_quotes.dart'; // getQuoteOfTheDay()
+import 'daily_quotes.dart';
 
 class HomePage extends StatefulWidget {
   final List<DiaryEntry> entries;
@@ -16,6 +15,7 @@ class HomePage extends StatefulWidget {
   final void Function(String) onDeleteById;
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final VoidCallback onLogout; // 👈 Added logout callback
 
   const HomePage({
     super.key,
@@ -25,6 +25,7 @@ class HomePage extends StatefulWidget {
     required this.onDeleteById,
     required this.isDarkMode,
     required this.onThemeChanged,
+    required this.onLogout,
   });
 
   @override
@@ -113,30 +114,8 @@ class _HomePageState extends State<HomePage> {
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => LoginPage(
-                    onLogin: (email) {
-                      // Replace this with navigation back to your main or wrapper
-                      // This example pushes the LoginPage and assumes login success will redirect.
-                      // If you have an app state or main page wrapper, navigate there instead.
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => HomePage(
-                            entries: [],
-                            onAdd: widget.onAdd,
-                            onEdit: widget.onEdit,
-                            onDeleteById: widget.onDeleteById,
-                            isDarkMode: widget.isDarkMode,
-                            onThemeChanged: widget.onThemeChanged,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                (route) => false,
-                );
+                Navigator.pop(context);
+                widget.onLogout(); // 👈 Proper logout
               },
             ),
             const SizedBox(height: 16),

@@ -28,6 +28,12 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  void _handleLogout() {
+    setState(() {
+      currentUserEmail = '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -49,6 +55,7 @@ class _MyAppState extends State<MyApp> {
           : HomeWrapper(
               isDarkMode: _isDarkMode,
               onThemeChanged: (val) => setState(() => _isDarkMode = val),
+              onLogout: _handleLogout,
             ),
     );
   }
@@ -57,11 +64,13 @@ class _MyAppState extends State<MyApp> {
 class HomeWrapper extends StatefulWidget {
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final VoidCallback onLogout;
 
   const HomeWrapper({
     super.key,
     required this.isDarkMode,
     required this.onThemeChanged,
+    required this.onLogout,
   });
 
   @override
@@ -114,6 +123,7 @@ class _HomeWrapperState extends State<HomeWrapper> {
             onDeleteById: _deleteEntry,
             isDarkMode: widget.isDarkMode,
             onThemeChanged: widget.onThemeChanged,
+            onLogout: widget.onLogout,
           );
   }
 }

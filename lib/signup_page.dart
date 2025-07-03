@@ -13,7 +13,7 @@ class _SignupPageState extends State<SignupPage> {
 
   void _signup() {
     if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-      Navigator.pop(context); // Go back to login page after signup
+      Navigator.pop(context, _emailController.text); // return email to login page
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
@@ -65,7 +65,7 @@ class _SignupPageState extends State<SignupPage> {
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Back to login
+                  Navigator.pop(context); // Go back to login
                 },
                 child: const Text('Already have an account? Login'),
               ),
