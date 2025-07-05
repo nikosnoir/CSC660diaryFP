@@ -144,9 +144,11 @@ class _CalendarPageState extends State<CalendarPage> {
                                 entry.description,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
-                              leading: Text(
-                                emotions[entry.emotion] ?? emotions['Neutral'] ?? '😐',
-                                style: const TextStyle(fontSize: 28),
+                              leading: Image.asset(
+                                emotions[entry.emotion] ?? emotions['Neutral']!,
+                                height: 40,
+                                width: 40,
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ))

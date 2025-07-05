@@ -190,7 +190,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                 return Column(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    Text(emotions[key] ?? '😐', style: const TextStyle(fontSize: 24)),
+                                    Image.asset(
+                                      emotions[key] ?? emotions['Neutral']!,
+                                      height: 30,
+                                      width: 30,
+                                      fit: BoxFit.cover,
+                                    ),
                                     const SizedBox(height: 4),
                                     Container(
                                       width: 20,

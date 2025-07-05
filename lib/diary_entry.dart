@@ -7,6 +7,7 @@ class DiaryEntry {
   final String user;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isFavorite;
 
   DiaryEntry({
     required this.id,
@@ -17,6 +18,7 @@ class DiaryEntry {
     required this.user,
     required this.createdAt,
     required this.updatedAt,
+    this.isFavorite = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +31,7 @@ class DiaryEntry {
       'user': user,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'isFavorite': isFavorite ? 1 : 0,
     };
   }
 
@@ -42,6 +45,7 @@ class DiaryEntry {
       user: map['user'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      isFavorite: map['isFavorite'] == 1,
     );
   }
 }

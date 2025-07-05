@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: 
   cupertino_icons: ^1.0.8
   lottie: ^3.1.0
   table_calendar: ^3.0.9
@@ -30,7 +31,20 @@ flutter:
   assets:
     - assets/bg_light.jpg
     - assets/bg_dark.jpg
-    - assets/icon.png  # Make sure your icon is in this path
+    - assets/icon.png
+    - assets/splash.gif
+
+    # Emotion GIFs
+    - assets/emotions/happy_emoji.gif
+    - assets/emotions/sad_emoji.gif
+    - assets/emotions/angry_emoji.gif
+    - assets/emotions/excited_emoji.gif
+    - assets/emotions/calm_emoji.gif
+    - assets/emotions/neutral_emoji.gif
+
+    # Animated feedbacks
+    - assets/animations/saving.gif
+    - assets/animations/favorite.gif
 
 flutter_icons:
   android: true

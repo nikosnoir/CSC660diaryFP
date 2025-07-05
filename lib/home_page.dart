@@ -15,7 +15,7 @@ class HomePage extends StatefulWidget {
   final void Function(String) onDeleteById;
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
-  final VoidCallback onLogout; // 👈 Added logout callback
+  final VoidCallback onLogout;
 
   const HomePage({
     super.key,
@@ -33,7 +33,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String _sortOption = 'Newest';
+  String _sortOption = 'Latest Added';
   String _searchQuery = '';
   String? _selectedEmotion;
 
@@ -41,24 +41,38 @@ class _HomePageState extends State<HomePage> {
     List<DiaryEntry> entries = List.from(widget.entries);
 
     if (_selectedEmotion != null) {
-      entries = entries.where((e) => e.emotion == _selectedEmotion).toList();
+      if (_selectedEmotion == 'Favorites') {
+        entries = entries.where((e) => e.isFavorite).toList();
+      } else {
+        entries = entries.where((e) => e.emotion == _selectedEmotion).toList();
+      }
     }
 
     if (_searchQuery.isNotEmpty) {
       entries = entries.where((e) =>
-        e.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        e.description.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+          e.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          e.description.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
 
-    if (_sortOption == 'Newest') {
-      entries = entries.reversed.toList();
-    } else if (_sortOption == 'Oldest') {
+    if (_sortOption == 'Latest Added') {
+      entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } else if (_sortOption == 'Diary Date (Oldest First)') {
       entries.sort((a, b) => _parseDate(a.date).compareTo(_parseDate(b.date)));
-    } else if (_sortOption == 'Recently Edited') {
+    } else if (_sortOption == 'Last Edited') {
       entries.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     }
 
     return entries;
+  }
+
+  Map<String, List<DiaryEntry>> get _groupedEntries {
+    final Map<String, List<DiaryEntry>> grouped = {};
+    for (var entry in _filteredEntries) {
+      grouped.putIfAbsent(entry.date, () => []).add(entry);
+    }
+    final sortedKeys = grouped.keys.toList()
+      ..sort((a, b) => _parseDate(b).compareTo(_parseDate(a)));
+    return {for (var k in sortedKeys) k: grouped[k]!};
   }
 
   DateTime _parseDate(String dateStr) {
@@ -115,7 +129,7 @@ class _HomePageState extends State<HomePage> {
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                widget.onLogout(); // 👈 Proper logout
+                widget.onLogout();
               },
             ),
             const SizedBox(height: 16),
@@ -136,7 +150,6 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Daily Quote
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   child: Text(
@@ -148,8 +161,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-
-                // Top bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -164,9 +175,9 @@ class _HomePageState extends State<HomePage> {
                       DropdownButton<String>(
                         value: _sortOption,
                         items: const [
-                          DropdownMenuItem(value: 'Newest', child: Text('Latest Add')),
-                          DropdownMenuItem(value: 'Oldest', child: Text('Date')),
-                          DropdownMenuItem(value: 'Recently Edited', child: Text('Recent Edit')),
+                          DropdownMenuItem(value: 'Latest Added', child: Text('Latest Added')),
+                          DropdownMenuItem(value: 'Diary Date (Oldest First)', child: Text('Diary Date (Oldest First)')),
+                          DropdownMenuItem(value: 'Last Edited', child: Text('Last Edited')),
                         ],
                         onChanged: (val) {
                           if (val != null) setState(() => _sortOption = val);
@@ -175,8 +186,6 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-
-                // Search bar
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
@@ -193,104 +202,74 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                 ),
-
-                // Mood Filter
                 SizedBox(
                   height: 60,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: emotions.entries.map((e) {
-                      final selected = _selectedEmotion == e.key;
-                      return Padding(
+                    children: [
+                      Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          label: Text(e.value, style: const TextStyle(fontSize: 20)),
-                          selected: selected,
+                          label: const Text("Favorites", style: TextStyle(fontSize: 16)),
+                          avatar: const Icon(Icons.star, size: 18),
+                          selected: _selectedEmotion == 'Favorites',
                           onSelected: (_) {
                             setState(() {
-                              _selectedEmotion = selected ? null : e.key;
+                              _selectedEmotion = _selectedEmotion == 'Favorites' ? null : 'Favorites';
                             });
                           },
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      ...emotions.entries.map((e) {
+                        final selected = _selectedEmotion == e.key;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(e.key, style: const TextStyle(fontSize: 16)),
+                            avatar: Image.asset(e.value, height: 24),
+                            selected: selected,
+                            onSelected: (_) {
+                              setState(() {
+                                _selectedEmotion = selected ? null : e.key;
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ],
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
-                // Diary list
                 Expanded(
-                  child: _filteredEntries.isEmpty
-                      ? const Center(child: Text("No diary entries found."))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _filteredEntries.length,
-                          itemBuilder: (context, index) {
-                            final entry = _filteredEntries[index];
-                            return Dismissible(
-                              key: Key(entry.id),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                color: Colors.red,
-                                child: const Icon(Icons.delete, color: Colors.white),
-                              ),
-                              onDismissed: (_) {
-                                widget.onDeleteById(entry.id);
-                                _showUndoSnackBar(entry);
-                              },
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => DiaryDetailPage(
-                                        entry: entry,
-                                        onEdit: (updated) => widget.onEdit(entry.id, updated),
-                                        onDelete: () {
-                                          widget.onDeleteById(entry.id);
-                                          Navigator.pop(context, 'deleted');
-                                        },
-                                      ),
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() {}); // Triggers rebuild
+                    },
+                    child: _filteredEntries.isEmpty
+                        ? const Center(child: Text("No diary entries found."))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _groupedEntries.length,
+                            itemBuilder: (context, index) {
+                              final date = _groupedEntries.keys.elementAt(index);
+                              final entriesForDate = _groupedEntries[date]!;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8, top: 16),
+                                    child: Text(
+                                      date,
+                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                     ),
-                                  );
-                                  if (result == 'deleted') {
-                                    widget.onDeleteById(entry.id);
-                                  }
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
-                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Text(emotions[entry.emotion] ?? '😐', style: const TextStyle(fontSize: 28)),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(entry.date, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                            const SizedBox(height: 4),
-                                            Text(entry.title, style: const TextStyle(fontSize: 16)),
-                                            const SizedBox(height: 4),
-                                            Text(entry.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                  ...entriesForDate.map(_buildDiaryTile).toList(),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
                 ),
               ],
             ),
@@ -338,6 +317,76 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => ProfilePage(entries: widget.entries)));
                 },
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiaryTile(DiaryEntry entry) {
+    return Dismissible(
+      key: Key(entry.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (_) {
+        widget.onDeleteById(entry.id);
+        _showUndoSnackBar(entry);
+      },
+      child: GestureDetector(
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DiaryDetailPage(
+                entry: entry,
+                onEdit: (updated) => widget.onEdit(entry.id, updated),
+                onDelete: () {
+                  widget.onDeleteById(entry.id);
+                  Navigator.pop(context, 'deleted');
+                },
+              ),
+            ),
+          );
+          if (result == 'deleted') {
+            widget.onDeleteById(entry.id);
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                emotions[entry.emotion] ?? emotions['Neutral']!,
+                height: 40,
+                width: 40,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entry.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(entry.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              if (entry.isFavorite)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Image.asset('assets/animations/favorite.gif', height: 32, width: 32),
+                ),
             ],
           ),
         ),

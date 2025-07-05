@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'signup_page.dart';
-import 'globals.dart';
 
 class LoginPage extends StatefulWidget {
   final Function(String) onLogin;
@@ -27,6 +26,20 @@ class _LoginPageState extends State<LoginPage> {
         const SnackBar(content: Text('Please enter both email and password')),
       );
     }
+  }
+
+  void _mockBiometricLogin() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    await Future.delayed(const Duration(seconds: 2));
+    Navigator.pop(context); // Close the loading dialog
+
+    // Simulated biometric email login
+    widget.onLogin('biometric@mock.com');
   }
 
   @override
@@ -70,6 +83,12 @@ class _LoginPageState extends State<LoginPage> {
                   padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   child: Text('Login'),
                 ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                icon: const Icon(Icons.fingerprint, size: 30),
+                label: const Text('Login with Fingerprint'),
+                onPressed: _mockBiometricLogin,
               ),
               const SizedBox(height: 16),
               TextButton(

@@ -17,7 +17,7 @@ class DBHelper {
     final path = join(await getDatabasesPath(), 'diary.db');
     return await openDatabase(
       path,
-      version: 2, // version bumped for schema updates
+      version: 3, // 🔼 bump version to trigger upgrade
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE entries (
@@ -28,9 +28,15 @@ class DBHelper {
             emotion TEXT,
             user TEXT,
             createdAt TEXT,
-            updatedAt TEXT
+            updatedAt TEXT,
+            isFavorite INTEGER DEFAULT 0
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 3) {
+          await db.execute("ALTER TABLE entries ADD COLUMN isFavorite INTEGER DEFAULT 0");
+        }
       },
     );
   }
@@ -67,6 +73,16 @@ class DBHelper {
       entry.toMap(),
       where: 'id = ?',
       whereArgs: [entry.id],
+    );
+  }
+
+  Future<void> toggleFavorite(String id, bool isFav) async {
+    final database = await db;
+    await database.update(
+      'entries',
+      {'isFavorite': isFav ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

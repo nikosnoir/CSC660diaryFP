@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'db_helper.dart';
 import 'diary_entry.dart';
 import 'home_page.dart';
 import 'login_page.dart';
 import 'globals.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  currentUserEmail = prefs.getString('loggedInEmail') ?? '';
   runApp(const MyApp());
 }
 
@@ -21,16 +23,31 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
+  bool _showSplash = true;
 
-  void _handleLogin(String email) {
+  void _handleLogin(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('loggedInEmail', email);
     setState(() {
       currentUserEmail = email;
     });
   }
 
-  void _handleLogout() {
+  void _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('loggedInEmail');
     setState(() {
       currentUserEmail = '';
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      setState(() {
+        _showSplash = false;
+      });
     });
   }
 
@@ -50,13 +67,15 @@ class _MyAppState extends State<MyApp> {
       ),
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      home: currentUserEmail.isEmpty
-          ? LoginPage(onLogin: _handleLogin)
-          : HomeWrapper(
-              isDarkMode: _isDarkMode,
-              onThemeChanged: (val) => setState(() => _isDarkMode = val),
-              onLogout: _handleLogout,
-            ),
+      home: _showSplash
+          ? const SplashScreen()
+          : currentUserEmail.isEmpty
+              ? LoginPage(onLogin: _handleLogin)
+              : HomeWrapper(
+                  isDarkMode: _isDarkMode,
+                  onThemeChanged: (val) => setState(() => _isDarkMode = val),
+                  onLogout: _handleLogout,
+                ),
     );
   }
 }
