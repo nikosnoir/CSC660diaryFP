@@ -39,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.pop(context); // Close the loading dialog
 
     // Simulated biometric email login
-    widget.onLogin('biometric@mock.com');
+    widget.onLogin('aimanhazimnik@gmail.com');
   }
 
   @override
